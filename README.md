@@ -22,7 +22,7 @@ Note: some websites (e.g., Wikipedia) block automated requests and will return a
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/website-analyzer-cli.git
+git clone https://github.com/sadovnyk/website-analyzer-cli.git
 cd website-analyzer-cli
 python -m venv .venv
 .venv\Scripts\activate      # Windows
