@@ -11,7 +11,7 @@ async def check_status(url):
             start = time.time()
             async with session.get(url) as response:
                 end = time.time()
-                html_content = await response.text()
+                html_content = await response.text(errors="ignore")
                 soup = BeautifulSoup(html_content, 'html.parser')
                 title = soup.title.text.strip() if soup.title else "Not found"
                 meta_data = soup.find('meta', attrs={'name': 'description'})
@@ -24,10 +24,14 @@ async def check_status(url):
                     f"Duration: {duration_ms}\n"
                 )
                 return report
+    except (aiohttp.InvalidURL, ValueError):
+        return f"Invalid URL: {url}"
     except aiohttp.ClientConnectorError:
-        return f"Title: {url}"
-    except asyncio.TimeoutError:
+        return f"Connection failed: {url}"
+    except (asyncio.TimeoutError, ValueError):
         return f"Timeout: {url}"
+    except aiohttp.ClientError as e:
+        return f"Client error for {url}: {e}"
 
 async def check_multiple(urls):
     tasks = [check_status(url) for url in urls]

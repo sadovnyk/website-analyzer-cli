@@ -8,12 +8,16 @@ from analyzer.config import HEADERS
 def get_ip(url):
         try:
             host = urlparse(url).hostname
+            if not host:
+                return "Not found IP"
             ip = socket.gethostbyname(host)
             return ip
-        except (socket.gaierror,ValueError):
+        except (socket.gaierror,ValueError, UnicodeError):
             return "Not found IP"
 
 async def get_geolocation(ip):
+    if ip == "Not found IP":
+        return "Not found geolocation"
     try:
         url = f"https://ipinfo.io/{ip}/json"
         async with aiohttp.ClientSession(headers=HEADERS) as session:
@@ -31,19 +35,26 @@ async def get_geolocation(ip):
 
 def certificate(url):
     host = urlparse(url).hostname
+    if not host:
+        return "Invalid URL"
     try:
         context = ssl.create_default_context()
         with socket.create_connection((host, 443)) as sock:
             with context.wrap_socket(sock, server_hostname=host) as sSock:
                 cert = sSock.getpeercert()
-                date = datetime.strptime(cert['notAfter'], '%b %d %H:%M:%S %Y %Z')
+                if not cert:
+                    return "Certificate not found"
+                not_after = cert.get('notAfter')
+                if not isinstance(not_after, str):
+                    return "Certificate not found"
+                date = datetime.strptime(not_after, '%b %d %H:%M:%S %Y %Z')
                 date = date.replace(tzinfo=timezone.utc)
                 current_date = datetime.now(timezone.utc)
                 expires = date - current_date
                 return f"Certificate expires in {expires.days} days"
     except ssl.SSLError:
         return "SSL error"
-    except (OSError, socket.timeout):
+    except (OSError, socket.timeout, UnicodeError):
         return "Connection error"
-    except KeyError:
+    except (KeyError, ValueError):
         return "Certificate not found"

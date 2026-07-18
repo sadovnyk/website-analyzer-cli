@@ -39,11 +39,16 @@ async def main(main_url):
     console.print(Panel(f"IP: {report['ip']}\n{report['geo']}", title="IP & Location", border_style="yellow"))
     console.print(Panel(report["cert"], title="SSL Certificate", border_style="green"))
     console.print(Panel(report["links"], title="Links Checked", border_style="magenta"))
-    console.print(Panel(report["number of links"], title="🔗 Count of links:", border_style="blue"))
+    console.print(Panel(report["number of links"], title="Count of links:", border_style="blue"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analyze a website.")
     parser.add_argument("url", help="The URL to analyze.")
     args = parser.parse_args()
     url = validate_url(args.url)
-    asyncio.run(main(url))
+
+    try:
+        asyncio.run(main(url))
+    except KeyboardInterrupt:
+        console.print("\n[bold red]Analysis interrupted by user.")
+        raise SystemExit(1)
