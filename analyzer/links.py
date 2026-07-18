@@ -12,10 +12,10 @@ async def get_links(base_url):
                 soup = BeautifulSoup(html, 'html.parser')
                 un_links = set()
                 for tag in soup.find_all('a', href=True):
-                    href = tag['href']
-                    if isinstance(href, str):
+                    href= tag['href']
+                    if isinstance(href, list):
                         href = " ".join(href)
-                    un_links.add(str(href))
+                    un_links.add(href.strip())
 
                 length = len(un_links)
                 return f"{base_url} -> count of links: {length}"
@@ -35,10 +35,10 @@ async def extract_links(base_url):
                 soup = BeautifulSoup(html, 'html.parser')
                 un_links = set()
                 for tag in soup.find_all('a', href=True):
-                    href = tag['href']
-                    if isinstance(href, str):
+                    href= tag['href']
+                    if isinstance(href, list):
                         href = " ".join(href)
-                    un_links.add(str(href))
+                    un_links.add(href.strip())
                 return un_links, 200
 
     except (aiohttp.InvalidURL, ValueError):
