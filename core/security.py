@@ -3,58 +3,85 @@ import ssl
 import aiohttp
 from urllib.parse import urlparse
 from datetime import datetime, timezone
-from analyzer.config import HEADERS
+from core.config import HEADERS
+
 
 def get_ip(url):
-        try:
-            host = urlparse(url).hostname
-            if not host:
-                return "Not found IP"
-            ip = socket.gethostbyname(host)
-            return ip
-        except (socket.gaierror,ValueError, UnicodeError):
-            return "Not found IP"
+    try:
+        host = urlparse(url).hostname
+        if not host:
+            return None
+        ip = socket.gethostbyname(host)
+        return ip
+    except (socket.gaierror, ValueError, UnicodeError):
+        return None
+
 
 async def get_geolocation(ip):
-    if ip == "Not found IP":
-        return "Not found geolocation"
+    access = {
+        "country": None,
+        "city": None,
+        "org": None,
+        "error": None
+    }
+
+    if ip is None:
+        access["error"] = "invalid_ip"
+        return access
+
     try:
         url = f"https://ipinfo.io/{ip}/json"
         async with aiohttp.ClientSession(headers=HEADERS) as session:
             async with session.get(url) as response:
                 data = await response.json()
-                results = (
-                    f"Country: {data.get('country','Unknown')}\n"
-                    f"City: {data.get('city','Unknown')}\n"
-                    f"Org: {data.get('org','Unknown')}"
-                )
-                return results
+                access["country"] = data.get("country", None)
+                access["city"] = data.get("city", None)
+                access["org"] = data.get("org", None)
+                return access
 
     except (aiohttp.ClientError, ValueError):
-        return "Not found geolocation"
+        access["error"] = "failed_to_fetch_geolocation"
+        return access
+
 
 def certificate(url):
+    access = {
+        "ssl_days_left": None,
+        "error": None,
+        "valid": None
+    }
     host = urlparse(url).hostname
     if not host:
-        return "Invalid URL"
+        access["error"] = "Invalid URL"
+        return access
     try:
         context = ssl.create_default_context()
         with socket.create_connection((host, 443)) as sock:
             with context.wrap_socket(sock, server_hostname=host) as sSock:
                 cert = sSock.getpeercert()
                 if not cert:
-                    return "Certificate not found"
+                    access["error"] = "Certificate not found"
+                    return access
                 not_after = cert.get('notAfter')
                 if not isinstance(not_after, str):
-                    return "Certificate not found"
+                    access["error"] = "Certificate not found"
+                    return access
                 date = datetime.strptime(not_after, '%b %d %H:%M:%S %Y %Z')
                 date = date.replace(tzinfo=timezone.utc)
                 current_date = datetime.now(timezone.utc)
                 expires = date - current_date
-                return f"Certificate expires in {expires.days} days"
+                access["ssl_days_left"] = expires.days
+                if expires.days < 0:
+                    access["valid"] = False
+                else:
+                    access["valid"] = True
+                return access
     except ssl.SSLError:
-        return "SSL error"
+        access["error"] = "ssl_error"
+        return access
     except (OSError, socket.timeout, UnicodeError):
-        return "Connection error"
+        access["error"] = "connection_error"
+        return access
     except (KeyError, ValueError):
-        return "Certificate not found"
+        access["error"] = "certificate_not_found"
+        return access

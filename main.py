@@ -1,8 +1,8 @@
 import asyncio
 import argparse
-from analyzer.network import check_status
-from analyzer.security import get_ip, certificate, get_geolocation
-from analyzer.links import broken_links, get_links
+from core.network import check_status
+from core.security import get_ip, certificate, get_geolocation
+from core.links import broken_links
 from rich.console import Console
 from rich.panel import Panel
 
@@ -13,7 +13,6 @@ async def analyze(Url):
     geo = await get_geolocation(ip)
     cert = certificate(Url)
     links = await broken_links(Url)
-    numberOfLinks = await get_links(Url)
 
     return {
         "status": status,
@@ -21,7 +20,7 @@ async def analyze(Url):
         "geo": geo,
         "cert": cert,
         "links": links,
-        "number of links": numberOfLinks
+        "number_of_links": links["total_links"]
     }
 
 
@@ -30,16 +29,51 @@ def validate_url(urL):
         urL = "https://" + urL
     return urL
 
+
 console = Console()
+
 
 async def main(main_url):
     with console.status("[bold cyan]Analyzing website..."):
         report = await analyze(main_url)
-    console.print(Panel(report["status"], title="Website Info", border_style="cyan"))
-    console.print(Panel(f"IP: {report['ip']}\n{report['geo']}", title="IP & Location", border_style="yellow"))
-    console.print(Panel(report["cert"], title="SSL Certificate", border_style="green"))
-    console.print(Panel(report["links"], title="Links Checked", border_style="magenta"))
-    console.print(Panel(report["number of links"], title="Count of links:", border_style="blue"))
+
+    status = report["status"]
+    if status["error"]:
+        status_text = f"Error: {status['error']}"
+    else:
+        status_text = (
+            f"Status code: {status['status_code']}\n"
+            f"Title: {status['title']}\n"
+            f"Description: {status['description']}\n"
+            f"Duration: {status['duration_ms']} ms"
+        )
+    console.print(Panel(status_text, title="Website Info", border_style="cyan"))
+
+    geo = report["geo"]
+    if geo["error"]:
+        geo_text = f"Error: {geo['error']}"
+    else:
+        geo_text = f"Country: {geo['country']}\nCity: {geo['city']}\nOrganization: {geo['org']}"
+    console.print(Panel(f"IP: {report['ip']}\n{geo_text}", title="IP & Location", border_style="yellow"))
+
+    cert = report["cert"]
+    if cert["error"]:
+        cert_text = f"Error: {cert['error']}"
+    else:
+        cert_text = f"Expires in {cert['ssl_days_left']} days (valid: {cert['valid']})"
+    console.print(Panel(cert_text, title="SSL Certificate", border_style="green"))
+
+    links = report["links"]
+    if links["error"]:
+        links_text = f"Unable to check links: {links['error']}"
+    elif links["broken_links"]:
+        links_text = "\n".join(f"{l['url']} -> {l['status'] or l['error']}" for l in links["broken_links"])
+    else:
+        links_text = "No broken links found"
+    console.print(Panel(links_text, title="Links Checked", border_style="magenta"))
+
+    console.print(Panel(str(links["total_links"]), title="Count of links", border_style="blue"))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analyze a website.")

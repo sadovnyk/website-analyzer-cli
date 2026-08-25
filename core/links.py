@@ -2,105 +2,96 @@ import aiohttp
 import asyncio
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-from analyzer.config import HEADERS
-
-async def get_links(base_url):
-    try:
-        async with aiohttp.ClientSession(headers=HEADERS) as session:
-            async with session.get(base_url) as response:
-                html = await response.text(errors="ignore")
-                soup = BeautifulSoup(html, 'html.parser')
-                un_links = set()
-                for tag in soup.find_all('a', href=True):
-                    href= tag['href']
-                    if isinstance(href, list):
-                        href = " ".join(href)
-                    un_links.add(href.strip())
-
-                length = len(un_links)
-                return f"{base_url} -> count of links: {length}"
-    except (aiohttp.ClientConnectorError, ValueError):
-        return f"{base_url} -> Connection error"
-    except (asyncio.TimeoutError, ValueError):
-        return f"{base_url} -> Timeout error"
+from core.config import HEADERS
 
 
 async def extract_links(base_url):
+    access = {
+        "links": None,
+        "error": None,
+        "status": None
+    }
     try:
         async with aiohttp.ClientSession(headers=HEADERS) as session:
             async with session.get(base_url) as response:
                 if response.status != 200:
-                    return None, response.status
+                    access["status"] = response.status
+                    return access
                 html = await response.text(errors="ignore")
                 soup = BeautifulSoup(html, 'html.parser')
                 un_links = set()
                 for tag in soup.find_all('a', href=True):
-                    href= tag['href']
+                    href = tag['href']
                     if isinstance(href, list):
                         href = " ".join(href)
                     un_links.add(href.strip())
-                return un_links, 200
+                access["links"] = un_links
+                access["status"] = 200
+                return access
 
     except (aiohttp.InvalidURL, ValueError):
-        return set(), -3
+        access["error"] = "invalid_url"
+        return access
     except aiohttp.ClientConnectorError:
-        return set(), -1
+        access["error"] = "connection_failed"
+        return access
     except asyncio.TimeoutError:
-        return set(), -2
+        access["error"] = "timeout"
+        return access
 
-
-async def get_many_links(urls):
-    many_urls = [get_links(url) for url in urls]
-    results = await asyncio.gather(*many_urls, return_exceptions=True)
-    outputs = []
-    for result in results:
-        if isinstance(result, Exception):
-            outputs.append(f"Error: {result}")
-        else:
-            outputs.append(result)
-    return "\n".join(outputs)
 
 async def check_link(session, url):
+    access = {
+        "url": url,
+        "status": None,
+        "error": None
+    }
     try:
-        async with session.head(url,timeout=aiohttp.ClientTimeout(total=3), allow_redirects=True) as response:
-            return url, response.status
+        async with session.head(url, timeout=aiohttp.ClientTimeout(total=3), allow_redirects=True) as response:
+            access["status"] = response.status
+            return access
     except aiohttp.ClientConnectorError:
-        return url, -1
+        access["error"] = "connection_failed"
+        return access
     except asyncio.TimeoutError:
-        return url, -2
+        access["error"] = "timeout"
+        return access
+
 
 async def check_links(urls):
     async with aiohttp.ClientSession(headers=HEADERS) as session:
         links = [check_link(session, link) for link in urls]
         results = await asyncio.gather(*links, return_exceptions=True)
-        outputs = []
-        for result in results:
+        cleaned_results = []
+        for url, result in zip(urls, results):
             if isinstance(result, Exception):
-                outputs.append(f"Error: {result}")
-            else:
-                url, status = result
-                if status == -1:
-                    outputs.append(f"Connection error: {url} status code: {status}")
-                elif status == -2:
-                    outputs.append(f"Timeout error: {url}, status code: {status}")
-                else:
-                    outputs.append(f"Link is working: {url}, status code: {status}")
+                result = {"url": url, "status": None, "error": str(result)}
+            cleaned_results.append(result)
 
-        return "\n".join(outputs)
+        return cleaned_results
+
 
 async def broken_links(url):
-    un_links, status = await extract_links(url)
+    access = {
+        "url": url,
+        "broken_links": [],
+        "error": None,
+        "total_links": None
+    }
+    result = await extract_links(url)
 
-    if status == -1:
-        return "Unable to check links — connection error (host unreachable or DNS failed)"
-    if status == -2:
-        return "Unable to check links — request timed out"
-    if status == -3:
-        return "Unable to check links — invalid URL"
-    if status != 200:
-        return f"Unable to check links — the page returned status code {status}"
+    if result["error"] is not None:
+        access["error"] = result["error"]
+        return access
 
-    absolute_links = [urljoin(url,link) for link in un_links]
-    if not absolute_links:
-        return "No absolute links found"
-    return await check_links(absolute_links)
+    if result["status"] != 200:
+        access["error"] = f"Unable to check links — the page returned status code {result['status']}"
+        return access
+
+    absolute_links = [urljoin(url, link) for link in result["links"]]
+    access["total_links"] = len(absolute_links)
+    checked_links = await check_links(absolute_links)
+    for link in checked_links:
+        if link["error"] is not None or link["status"] is None or link["status"] >= 400:
+            access["broken_links"].append(link)
+    return access
