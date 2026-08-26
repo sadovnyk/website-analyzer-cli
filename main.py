@@ -5,7 +5,7 @@ from core.security import get_ip, certificate, get_geolocation
 from core.links import broken_links
 from rich.console import Console
 from rich.panel import Panel
-
+from core.database import save_scan, save_links
 
 async def analyze(Url):
     status = await check_status(Url)
@@ -60,7 +60,7 @@ async def main(main_url):
     if cert["error"]:
         cert_text = f"Error: {cert['error']}"
     else:
-        cert_text = f"Expires in {cert['ssl_days_left']} days (valid: {cert['valid']})"
+        cert_text = f"Expires in {cert['ssl_days_left']} days"
     console.print(Panel(cert_text, title="SSL Certificate", border_style="green"))
 
     links = report["links"]
@@ -73,6 +73,19 @@ async def main(main_url):
     console.print(Panel(links_text, title="Links Checked", border_style="magenta"))
 
     console.print(Panel(str(links["total_links"]), title="Count of links", border_style="blue"))
+
+    db_results = save_scan(main_url, report)
+
+    if db_results["error"]:
+        console.print(Panel(f"Data didn't save to MySQL!\nReason: {db_results['error']}", title="Error", border_style="red"))
+    else:
+        console.print(Panel("Data successfully saved to MySQL!", title="Good!", border_style="green"))
+        mongo_results = save_links(db_results["scan_id"],links)
+        if mongo_results["error"]:
+            console.print(
+                Panel(f"Data didn't save to MongoDB!\nReason: {mongo_results['error']}", title="Error", border_style="red"))
+        else:
+            console.print(Panel("Data successfully saved to MongoDB!", title="Good!", border_style="green"))
 
 
 if __name__ == "__main__":
