@@ -7,22 +7,19 @@ load_dotenv()
 def get_connection():
     return pymysql.connect(port=int(os.environ.get("DB_PORT")) ,host=os.environ.get("DB_HOST"),user=os.environ.get("DB_USER"),password=os.environ.get("DB_PASSWORD"),database=os.environ.get("DB_NAME"),charset="utf8mb4")
 
-def save_scan(url,data):
+def save_scan(url,data,site_id):
     access = {
         "success": False,
         "error": None,
         "scan_id": None
     }
-
     connection = get_connection()
-
     try:
-
         with connection.cursor() as cursor:
             query = (
                 "INSERT INTO scans (url, status_code, title, description, duration_ms, "
-                "status_error, ip, country, city, org, geo_error, ssl_days_left, valid, cert_error, total_links, links_error) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                "status_error, ip, country, city, org, geo_error, ssl_days_left, valid, cert_error, total_links, links_error,site_id) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s)"
             )
             values = (
                 url,
@@ -41,11 +38,10 @@ def save_scan(url,data):
                 data["cert"]["error"],
                 data["number_of_links"],
                 data["links"]["error"],
+                site_id
             )
-
             cursor.execute(query, values)
             access["scan_id"] = cursor.lastrowid
-
         connection.commit()
         access["success"] = True
 
@@ -82,3 +78,31 @@ def save_links(scan_id,links_data):
     return access
 
 
+def get_active_sites():
+    access = {
+        "success": False,
+        "error": None,
+        "result": []
+    }
+
+    connection = get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            query = "SELECT id, url FROM sites WHERE is_active = TRUE"
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            for row in rows:
+                site_dict = {
+                    "id": row[0],
+                    "url": row[1]
+                }
+                access["result"].append(site_dict)
+
+        access["success"] = True
+    except Exception as e:
+        access["error"] = "db_select_failed"
+    finally:
+        connection.close()
+
+    return access

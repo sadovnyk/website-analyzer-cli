@@ -74,7 +74,7 @@ async def main(main_url):
 
     console.print(Panel(str(links["total_links"]), title="Count of links", border_style="blue"))
 
-    db_results = save_scan(main_url, report)
+    db_results = save_scan(main_url, report,None)
 
     if db_results["error"]:
         console.print(Panel(f"Data didn't save to MySQL!\nReason: {db_results['error']}", title="Error", border_style="red"))
