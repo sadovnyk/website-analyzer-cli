@@ -52,7 +52,7 @@ def certificate(url):
     }
     host = urlparse(url).hostname
     if not host:
-        access["error"] = "invalid_url"
+        access["error"] = "Invalid URL"
         return access
     try:
         context = ssl.create_default_context()
@@ -60,11 +60,11 @@ def certificate(url):
             with context.wrap_socket(sock, server_hostname=host) as sSock:
                 cert = sSock.getpeercert()
                 if not cert:
-                    access["error"] = "certificate_not_found"
+                    access["error"] = "Certificate not found"
                     return access
                 not_after = cert.get('notAfter')
                 if not isinstance(not_after, str):
-                    access["error"] = "certificate_not_found"
+                    access["error"] = "Certificate not found"
                     return access
                 date = datetime.strptime(not_after, '%b %d %H:%M:%S %Y %Z')
                 date = date.replace(tzinfo=timezone.utc)
