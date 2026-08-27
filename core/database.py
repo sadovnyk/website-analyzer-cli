@@ -5,7 +5,7 @@ import pymongo
 
 load_dotenv()
 def get_connection():
-    return pymysql.connect(host=os.environ.get("DB_HOST"),user=os.environ.get("DB_USER"),password=os.environ.get("DB_PASSWORD"),database=os.environ.get("DB_NAME"),charset="utf8mb4")
+    return pymysql.connect(port=int(os.environ.get("DB_PORT")) ,host=os.environ.get("DB_HOST"),user=os.environ.get("DB_USER"),password=os.environ.get("DB_PASSWORD"),database=os.environ.get("DB_NAME"),charset="utf8mb4")
 
 def save_scan(url,data):
     access = {
