@@ -78,7 +78,7 @@ def save_links(scan_id,links_data):
     return access
 
 
-def get_active_sites():
+def get_sites(only_active = False):
     access = {
         "success": False,
         "error": None,
@@ -89,19 +89,55 @@ def get_active_sites():
 
     try:
         with connection.cursor() as cursor:
-            query = "SELECT id, url FROM sites WHERE is_active = TRUE"
+
+            base_query = """
+                         SELECT sts.id, sts.url, sts.is_active, scs.status_code, scs.title
+                         FROM sites sts
+                                  LEFT JOIN scans scs ON sts.id = scs.site_id
+                             AND scs.id = (SELECT MAX(id) \
+                                           FROM scans sub_scs \
+                                           WHERE sub_scs.site_id = sts.id) \
+                         """
+
+            if only_active:
+                query = base_query + " WHERE sts.is_active = TRUE"
+            else:
+                query = base_query
             cursor.execute(query)
             rows = cursor.fetchall()
             for row in rows:
                 site_dict = {
                     "id": row[0],
-                    "url": row[1]
+                    "url": row[1],
+                    "is_active": row[2],
+                    "status_code": row[3],
+                    "title": row[4]
                 }
                 access["result"].append(site_dict)
 
         access["success"] = True
     except Exception as e:
         access["error"] = "db_select_failed"
+    finally:
+        connection.close()
+
+    return access
+
+def add_site_db(url):
+    access = {
+        "success": False,
+        "error": None
+    }
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            query = ("INSERT INTO sites (url) values (%s)")
+            values = (url,)
+            cursor.execute(query, values)
+            access["success"] = True
+            connection.commit()
+    except Exception as e:
+        access["error"] = "db_insert_failed"
     finally:
         connection.close()
 

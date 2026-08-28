@@ -2,13 +2,13 @@ import asyncio
 
 from datetime import datetime
 
-from core.database import get_active_sites, save_scan, save_links
+from core.database import get_sites, save_scan, save_links
 from main import analyze
 
 
 async def run_schedule():
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Launching the scheduler...")
-    active_sites = get_active_sites()
+    active_sites = get_sites(only_active=True)
 
     if active_sites["success"] is True:
         if not active_sites["result"]:

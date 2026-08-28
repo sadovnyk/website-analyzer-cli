@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Analyzer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #f1f3f5; padding-bottom: 15px; }
+        h1 { margin: 0; font-size: 1.8rem; color: #2c3e50; }
+        .btn { display: inline-block; background: #3b82f6; color: #fff; padding: 10px 18px; text-decoration: none; border-radius: 6px; font-weight: 600; transition: background 0.2s; }
+        .btn:hover { background: #2563eb; }
+        .btn-view { background: #10b981; padding: 6px 12px; font-size: 0.9rem; }
+        .btn-view:hover { background: #059669; }
+        .error-message { background: #fee2e2; color: #b91c1c; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #fca5a5; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px 10px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        th { background-color: #f9fafb; font-weight: 600; color: #4b5563; }
+        tr:hover { background-color: #f3f4f6; }
+        .badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: #fff; }
+        .badge-active { background-color: #10b981; }
+        .badge-inactive { background-color: #9ca3af; }
+        .badge-code { background-color: #4b5563; }
+        .badge-no-scan { background-color: #f59e0b; }
+        .text-muted { color: #9ca3af; font-size: 0.9rem; }
+        .empty-state { text-align: center; padding: 40px; color: #6b7280; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DashBoard</h1>
+            <a href="/add-site" class="btn">+ Add Site</a>
+        </header>
+
+        {% if error %}
+        <div class="error-message">
+            <strong>DataBase Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>URL</th>
+                    <th>Status</th>
+                    <th>HTTP Code</th>
+                    <th>Title</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for site in sites %}
+                <tr>
+                    <td>{{ site.id }}</td>
+                    <td><strong>{{ site.url }}</strong></td>
+                    <td>
+                        {% if site.is_active %}
+                            <span class="badge badge-active">Активний</span>
+                        {% else %}
+                            <span class="badge badge-inactive">На паузі</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if site.status_code %}
+                            <span class="badge badge-code">{{ site.status_code }}</span>
+                        {% else %}
+                            <span class="badge badge-no-scan">Немає сканів</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if site.title %}
+                            {{ site.title }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/site/{{ site.id }}" class="btn btn-view">Перегляд</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="empty-state">У базі поки немає сайтів. Додайте свій перший сайт!</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
