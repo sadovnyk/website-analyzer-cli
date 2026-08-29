@@ -179,7 +179,8 @@ def get_site_details(site_id):
                            scans.valid,
                            scans.cert_error,
                            scans.total_links,
-                           scans.links_error
+                           scans.links_error,
+                           scans.scanned_at
                     FROM sites
                              LEFT JOIN scans ON sites.id = scans.site_id
                     WHERE sites.id = %s
@@ -215,7 +216,8 @@ def get_site_details(site_id):
                             "valid": row["valid"],
                             "cert_error": row["cert_error"],
                             "total_links": row["total_links"],
-                            "links_error": row["links_error"]
+                            "links_error": row["links_error"],
+                            "scanned_at": row["scanned_at"]
 
                         })
                 access["success"] = True
@@ -254,6 +256,26 @@ def delete_site(site_id):
             access["success"] = True
     except Exception:
         access["error"] = "db_delete_failed"
+    finally:
+        connection.close()
+
+    return access
+
+def toggle_site_active(site_id):
+    access = {
+        "success": False,
+        "error": None,
+    }
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            query = ("UPDATE sites SET is_active = NOT is_active WHERE sites.id = %s")
+            values = (site_id,)
+            cursor.execute(query, values)
+            connection.commit()
+            access["success"] = True
+    except Exception:
+        access["error"] = "db_update_failed"
     finally:
         connection.close()
 

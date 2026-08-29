@@ -135,6 +135,8 @@
         .btn:hover { background: rgba(255, 255, 255, 0.03); color: var(--text); }
         .btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
         .btn-danger:hover { border-color: rgba(241, 104, 94, 0.5); color: var(--red); background: var(--red-dim); }
+        .btn-toggle:hover { border-color: rgba(244, 183, 64, 0.5); color: var(--amber); background: var(--amber-dim); }
+        .btn-toggle.is-resume:hover { border-color: rgba(53, 211, 153, 0.5); color: var(--green); background: var(--green-dim); }
 
         /* ---- vitals grid ---- */
         .vitals {
@@ -184,6 +186,47 @@
             font-size: 0.88rem;
             margin: 4px 0 0;
             line-height: 1.5;
+        }
+
+        /* ---- charts ---- */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .chart-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px 20px 14px;
+            margin-bottom: 28px;
+        }
+        .charts-grid .chart-card { margin-bottom: 0; }
+
+        .chart-card-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .chart-legend {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .chart-legend--green { color: var(--green); }
+        .chart-legend--blue { color: var(--blue); }
+
+        .chart-empty-note {
+            margin: 0;
+            padding: 12px 4px;
+            color: var(--text-faint);
+            font-size: 0.86rem;
+            text-align: center;
         }
 
         /* ---- section headers ---- */
@@ -335,6 +378,11 @@
                 <div class="meta-line">site #{{ site.id }} &middot; added {{ site.added_at }}</div>
             </div>
             <div class="header-actions">
+                <form action="/site/{{ site.id }}/toggle" method="POST">
+                    <button type="submit" class="btn btn-toggle{% if not site.is_active %} is-resume{% endif %}">
+                        {{ 'Resume monitoring' if not site.is_active else 'Pause monitoring' }}
+                    </button>
+                </form>
                 <form action="/site/{{ site.id }}/delete" method="POST"
                       onsubmit="return confirm('Remove {{ site.url }} and its scan history? This can\'t be undone.');">
                     <button type="submit" class="btn btn-danger">Delete site</button>
@@ -401,6 +449,31 @@
         {% endif %}
         {% endif %}
 
+        {% if chart_scans and chart_scans | length > 1 %}
+        <h2 class="section-title">Trends</h2>
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-card-head">
+                    <span class="vital-label" style="margin: 0;">Uptime</span>
+                    <span class="chart-legend chart-legend--green">2xx / 3xx</span>
+                </div>
+                <canvas id="uptime-chart" height="160"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-card-head">
+                    <span class="vital-label" style="margin: 0;">Response time</span>
+                    <span class="chart-legend chart-legend--blue">ms</span>
+                </div>
+                <canvas id="duration-chart" height="160"></canvas>
+            </div>
+        </div>
+        {% elif scans %}
+        <h2 class="section-title">Trends</h2>
+        <div class="chart-card">
+            <p class="chart-empty-note">Not enough data yet — trends appear once a couple of scans have run.</p>
+        </div>
+        {% endif %}
+
         <h2 class="section-title">Scan history &middot; {{ scans | length }}</h2>
 
         {% if scans %}
@@ -457,5 +530,89 @@
 
         {% endif %}
     </div>
+
+    {% if chart_scans and chart_scans | length > 1 %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script>
+        // Data is built server-side from `chart_scans` (oldest → newest).
+        // Values are simple numbers/short timestamps, so manual construction
+        // here is safe without needing a `tojson` filter.
+        const chartLabels = [
+            {% for s in chart_scans %}"{{ s.scanned_at }}"{% if not loop.last %},{% endif %}{% endfor %}
+        ];
+        const chartUptime = [
+            {% for s in chart_scans %}{{ 1 if s.status_code and s.status_code < 400 else 0 }}{% if not loop.last %},{% endif %}{% endfor %}
+        ];
+        const chartDuration = [
+            {% for s in chart_scans %}{{ s.duration_ms if s.duration_ms is not none else 'null' }}{% if not loop.last %},{% endif %}{% endfor %}
+        ];
+
+        const gridColor = '#26314d';
+        const textColor = '#8493b0';
+        const fontFamily = "'JetBrains Mono', ui-monospace, monospace";
+
+        Chart.defaults.color = textColor;
+        Chart.defaults.font.family = fontFamily;
+        Chart.defaults.font.size = 11;
+
+        new Chart(document.getElementById('uptime-chart'), {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    data: chartUptime,
+                    stepped: true,
+                    borderColor: '#35d399',
+                    backgroundColor: 'rgba(53, 211, 153, 0.12)',
+                    fill: true,
+                    pointRadius: 2,
+                    pointBackgroundColor: '#35d399',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: gridColor }, ticks: { maxTicksLimit: 6 } },
+                    y: {
+                        min: -0.1, max: 1.1,
+                        grid: { color: gridColor },
+                        ticks: {
+                            stepSize: 1,
+                            callback: (value) => (value === 1 ? 'Up' : value === 0 ? 'Down' : '')
+                        }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('duration-chart'), {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    data: chartDuration,
+                    borderColor: '#5c9dff',
+                    backgroundColor: 'rgba(92, 157, 255, 0.12)',
+                    fill: true,
+                    tension: 0.25,
+                    pointRadius: 2,
+                    pointBackgroundColor: '#5c9dff',
+                    borderWidth: 2,
+                    spanGaps: true,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: gridColor }, ticks: { maxTicksLimit: 6 } },
+                    y: { grid: { color: gridColor }, ticks: { callback: (v) => v + 'ms' } }
+                }
+            }
+        });
+    </script>
+    {% endif %}
 </body>
 </html>

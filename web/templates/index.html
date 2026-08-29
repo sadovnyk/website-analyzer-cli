@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SitePulse — Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+          rel="stylesheet">
     <style>
         :root {
             --bg: #0b1120;
@@ -28,20 +29,24 @@
             --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
         body {
             font-family: var(--sans);
-            background:
-                radial-gradient(ellipse 800px 400px at 20% -10%, rgba(92, 157, 255, 0.08), transparent),
-                var(--bg);
+            background: radial-gradient(ellipse 800px 400px at 20% -10%, rgba(92, 157, 255, 0.08), transparent),
+            var(--bg);
             color: var(--text);
             margin: 0;
             padding: 32px 20px 64px;
             min-height: 100vh;
         }
 
-        .shell { max-width: 1080px; margin: 0 auto; }
+        .shell {
+            max-width: 1080px;
+            margin: 0 auto;
+        }
 
         header {
             display: flex;
@@ -73,13 +78,21 @@
         }
 
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(53, 211, 153, 0.55); }
-            70% { box-shadow: 0 0 0 8px rgba(53, 211, 153, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(53, 211, 153, 0); }
+            0% {
+                box-shadow: 0 0 0 0 rgba(53, 211, 153, 0.55);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(53, 211, 153, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(53, 211, 153, 0);
+            }
         }
 
         @media (prefers-reduced-motion: reduce) {
-            .pulse-dot { animation: none; }
+            .pulse-dot {
+                animation: none;
+            }
         }
 
         .btn {
@@ -97,8 +110,15 @@
             cursor: pointer;
             transition: filter 0.15s ease;
         }
-        .btn:hover { filter: brightness(1.1); }
-        .btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+        .btn:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn:focus-visible {
+            outline: 2px solid var(--blue);
+            outline-offset: 2px;
+        }
 
         .error-banner {
             background: var(--red-dim);
@@ -109,7 +129,11 @@
             margin-bottom: 20px;
             font-size: 0.92rem;
         }
-        .error-banner strong { color: var(--red); font-family: var(--mono); }
+
+        .error-banner strong {
+            color: var(--red);
+            font-family: var(--mono);
+        }
 
         .panel {
             background: var(--surface);
@@ -118,7 +142,10 @@
             overflow: hidden;
         }
 
-        table { width: 100%; border-collapse: collapse; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
 
         th {
             text-align: left;
@@ -140,12 +167,28 @@
             vertical-align: middle;
         }
 
-        tbody tr:last-child td { border-bottom: none; }
-        tbody tr { transition: background 0.12s ease; }
-        tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
 
-        .site-id { font-family: var(--mono); color: var(--text-faint); font-size: 0.85rem; }
-        .site-url { font-weight: 600; color: var(--text); }
+        tbody tr {
+            transition: background 0.12s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .site-id {
+            font-family: var(--mono);
+            color: var(--text-faint);
+            font-size: 0.85rem;
+        }
+
+        .site-url {
+            font-weight: 600;
+            color: var(--text);
+        }
 
         .status-badge {
             display: inline-flex;
@@ -157,6 +200,7 @@
             font-weight: 600;
             font-family: var(--mono);
         }
+
         .status-badge::before {
             content: '';
             width: 6px;
@@ -164,8 +208,16 @@
             border-radius: 50%;
             background: currentColor;
         }
-        .status-badge--ok { background: var(--green-dim); color: var(--green); }
-        .status-badge--paused { background: var(--amber-dim); color: var(--amber); }
+
+        .status-badge--ok {
+            background: var(--green-dim);
+            color: var(--green);
+        }
+
+        .status-badge--paused {
+            background: var(--amber-dim);
+            color: var(--amber);
+        }
 
         .code-badge {
             font-family: var(--mono);
@@ -174,12 +226,68 @@
             padding: 3px 8px;
             border-radius: 6px;
         }
-        .code-ok { background: var(--green-dim); color: var(--green); }
-        .code-warn { background: var(--amber-dim); color: var(--amber); }
-        .code-err { background: var(--red-dim); color: var(--red); }
-        .code-none { color: var(--text-faint); font-family: var(--mono); font-size: 0.85rem; }
 
-        .title-cell { color: var(--text-dim); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .code-ok {
+            background: var(--green-dim);
+            color: var(--green);
+        }
+
+        .code-warn {
+            background: var(--amber-dim);
+            color: var(--amber);
+        }
+
+        .code-err {
+            background: var(--red-dim);
+            color: var(--red);
+        }
+
+        .code-none {
+            color: var(--text-faint);
+            font-family: var(--mono);
+            font-size: 0.85rem;
+        }
+
+        .title-cell {
+            color: var(--text-dim);
+            max-width: 260px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .actions-cell {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .btn-delete-inline {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-faint);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.15s ease;
+        }
+
+        .btn-delete-inline:hover {
+            border-color: rgba(241, 104, 94, 0.5);
+            color: var(--red);
+            background: var(--red-dim);
+        }
+
+        .btn-delete-inline:focus-visible {
+            outline: 2px solid var(--red);
+            outline-offset: 2px;
+        }
 
         .btn-view {
             display: inline-flex;
@@ -193,20 +301,177 @@
             border-radius: 6px;
             transition: background 0.15s ease;
         }
-        .btn-view:hover { background: var(--blue-dim); }
-        .btn-view:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+        .btn-view:hover {
+            background: var(--blue-dim);
+        }
+
+        .btn-view:focus-visible {
+            outline: 2px solid var(--blue);
+            outline-offset: 2px;
+        }
 
         .empty-state {
             text-align: center;
             padding: 64px 24px;
             color: var(--text-dim);
         }
-        .empty-state p { margin: 0; font-size: 0.95rem; }
-        .empty-state .glyph { font-family: var(--mono); font-size: 1.6rem; color: var(--text-faint); margin-bottom: 12px; }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .empty-state .glyph {
+            font-family: var(--mono);
+            font-size: 1.6rem;
+            color: var(--text-faint);
+            margin-bottom: 12px;
+        }
+
+        /* ---- scanning banner ---- */
+        .scan-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--blue-dim);
+            border: 1px solid rgba(92, 157, 255, 0.35);
+            color: #cfe0ff;
+            padding: 13px 16px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            font-size: 0.88rem;
+        }
+
+        .spinner {
+            width: 15px;
+            height: 15px;
+            flex-shrink: 0;
+            border: 2px solid rgba(92, 157, 255, 0.25);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .spinner {
+                animation: none;
+            }
+        }
+
+        .scan-banner strong {
+            color: var(--text);
+            font-family: var(--mono);
+        }
+
+        .scan-banner .countdown {
+            margin-left: auto;
+            font-family: var(--mono);
+            color: var(--blue);
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+        }
+
+        /* ---- post-add scan overlay ---- */
+        #scan-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 17, 32, 0.86);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        #scan-overlay.is-visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .scan-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 36px 40px;
+            text-align: center;
+            max-width: 320px;
+            width: calc(100% - 40px);
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 3px solid var(--border);
+            border-top-color: var(--blue);
+            margin: 0 auto 18px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .spinner {
+                animation: none;
+            }
+        }
+
+        .scan-card h2 {
+            margin: 0 0 6px;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .scan-card .target {
+            font-family: var(--mono);
+            font-size: 0.82rem;
+            color: var(--text-dim);
+            word-break: break-all;
+            margin-bottom: 18px;
+        }
+
+        .countdown-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 8px;
+            font-family: var(--mono);
+            color: var(--text-faint);
+            font-size: 0.8rem;
+        }
+
+        #scan-countdown {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--blue);
+            min-width: 1.2ch;
+            text-align: center;
+        }
 
         @media (max-width: 720px) {
-            table, thead, tbody, th, td, tr { display: block; }
-            thead { display: none; }
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+
+            thead {
+                display: none;
+            }
+
             tbody tr {
                 border-bottom: 1px solid var(--border);
                 padding: 14px 18px;
@@ -214,7 +479,12 @@
                 grid-template-columns: 1fr auto;
                 gap: 8px 12px;
             }
-            td { border: none; padding: 2px 0; }
+
+            td {
+                border: none;
+                padding: 2px 0;
+            }
+
             td::before {
                 content: attr(data-label);
                 display: block;
@@ -229,72 +499,89 @@
     </style>
 </head>
 <body>
-    <div class="shell">
-        <header>
-            <div class="brand">
-                <span class="pulse-dot" aria-hidden="true"></span>
-                SITEPULSE
-            </div>
-            <a href="/add-site" class="btn">+ Add site</a>
-        </header>
+<div class="shell">
+    <header>
+        <div class="brand">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            SITEPULSE
+        </div>
+        <a href="/add-site" class="btn">+ Add site</a>
+    </header>
 
-        {% if error %}
+    {% if error %}
         <div class="error-banner">
             <strong>Database error —</strong> {{ error }}
         </div>
-        {% endif %}
+    {% endif %}
 
-        <div class="panel">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>URL</th>
-                        <th>Monitoring</th>
-                        <th>Last code</th>
-                        <th>Title</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for site in sites %}
-                    <tr>
-                        <td data-label="ID"><span class="site-id">#{{ site.id }}</span></td>
-                        <td data-label="URL"><span class="site-url">{{ site.url }}</span></td>
-                        <td data-label="Monitoring">
-                            {% if site.is_active %}
-                                <span class="status-badge status-badge--ok">Active</span>
-                            {% else %}
-                                <span class="status-badge status-badge--paused">Paused</span>
-                            {% endif %}
-                        </td>
-                        <td data-label="Last code">
-                            {% if site.status_code %}
-                                <span class="code-badge {% if site.status_code < 300 %}code-ok{% elif site.status_code < 400 %}code-ok{% elif site.status_code < 500 %}code-warn{% else %}code-err{% endif %}">{{ site.status_code }}</span>
-                            {% else %}
-                                <span class="code-none">no scans yet</span>
-                            {% endif %}
-                        </td>
-                        <td data-label="Title" class="title-cell">
-                            {{ site.title if site.title else '—' }}
-                        </td>
-                        <td data-label="">
-                            <a href="/site/{{ site.id }}" class="btn-view">View →</a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6">
-                            <div class="empty-state">
-                                <div class="glyph">[ ]</div>
-                                <p>No sites yet. Add your first site to start monitoring.</p>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="panel">
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>URL</th>
+                <th>Monitoring</th>
+                <th>Last code</th>
+                <th>Title</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for site in sites %}
+                <tr>
+                    <td data-label="ID"><span class="site-id">#{{ site.id }}</span></td>
+                    <td data-label="URL"><span class="site-url">{{ site.url }}</span></td>
+                    <td data-label="Monitoring">
+                        {% if site.is_active %}
+                            <span class="status-badge status-badge--ok">Active</span>
+                        {% else %}
+                            <span class="status-badge status-badge--paused">Paused</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Last code">
+                        {% if site.status_code %}
+                            <span class="code-badge {% if site.status_code < 300 %}code-ok{% elif site.status_code < 400 %}code-ok{% elif site.status_code < 500 %}code-warn{% else %}code-err{% endif %}">{{ site.status_code }}</span>
+                        {% else %}
+                            <span class="code-none">no scans yet</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Title" class="title-cell">
+                        {{ site.title if site.title else '—' }}
+                    </td>
+                    <td data-label="" class="actions-cell">
+                        <form action="/site/{{ site.id }}/delete" method="POST"
+                              onsubmit="return confirm('Remove {{ site.url }} and its scan history? This can\'t be undone.');">
+                            <button type="submit" class="btn-delete-inline" title="Delete site">✕</button>
+                        </form>
+                        <a href="/site/{{ site.id }}" class="btn-view">View →</a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <div class="glyph">[ ]</div>
+                            <p>No sites yet. Add your first site to start monitoring.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="scan-overlay">
+    <div class="scan-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <h2>Running first scan</h2>
+        <div class="target" id="scan-target-url"></div>
+        <div class="countdown-row">
+            reloading in <span id="scan-countdown">5</span>s
         </div>
     </div>
+</div>
+
+<script src="/static/page_reloader.js" defer></script>
 </body>
 </html>

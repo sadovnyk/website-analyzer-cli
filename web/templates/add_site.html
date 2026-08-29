@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add site — SitePulse</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+          rel="stylesheet">
     <style>
         :root {
             --bg: #0b1120;
@@ -23,13 +24,14 @@
             --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
         body {
             font-family: var(--sans);
-            background:
-                radial-gradient(ellipse 800px 400px at 80% -10%, rgba(92, 157, 255, 0.08), transparent),
-                var(--bg);
+            background: radial-gradient(ellipse 800px 400px at 80% -10%, rgba(92, 157, 255, 0.08), transparent),
+            var(--bg);
             color: var(--text);
             margin: 0;
             padding: 32px 20px;
@@ -79,7 +81,11 @@
             margin-bottom: 20px;
             font-size: 0.88rem;
         }
-        .error-banner strong { color: var(--red); font-family: var(--mono); }
+
+        .error-banner strong {
+            color: var(--red);
+            font-family: var(--mono);
+        }
 
         label {
             display: block;
@@ -101,8 +107,14 @@
             outline: none;
             transition: border-color 0.15s ease;
         }
-        input[type="url"]::placeholder { color: var(--text-faint); }
-        input[type="url"]:focus { border-color: var(--blue); }
+
+        input[type="url"]::placeholder {
+            color: var(--text-faint);
+        }
+
+        input[type="url"]:focus {
+            border-color: var(--blue);
+        }
 
         .actions {
             display: flex;
@@ -124,40 +136,54 @@
             text-decoration: none;
             transition: filter 0.15s ease, background 0.15s ease;
         }
-        .btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
-        .btn-primary { background: var(--blue); color: #061022; }
-        .btn-primary:hover { filter: brightness(1.1); }
+        .btn:focus-visible {
+            outline: 2px solid var(--blue);
+            outline-offset: 2px;
+        }
+
+        .btn-primary {
+            background: var(--blue);
+            color: #061022;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+        }
 
         .btn-secondary {
             background: transparent;
             color: var(--text-dim);
             border: 1px solid var(--border);
         }
-        .btn-secondary:hover { background: rgba(255, 255, 255, 0.03); color: var(--text); }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div class="eyebrow">New target</div>
-        <h1>Add a site to watch</h1>
-        <p class="subtext">SitePulse will start checking status, SSL, and links on the next scheduled run.</p>
+<div class="card">
+    <div class="eyebrow">New target</div>
+    <h1>Add a site to watch</h1>
+    <p class="subtext">SitePulse will start checking status, SSL, and links on the next scheduled run.</p>
 
-        {% if error %}
-        <div class="error-banner">
-            <strong>Couldn't add site —</strong> {{ error }}
-        </div>
-        {% endif %}
-
-        <form action="/add-site" method="POST">
-            <label for="url">Website URL</label>
-            <input type="url" id="url" name="url" placeholder="https://example.com" required autofocus>
-
-            <div class="actions">
-                <button type="submit" class="btn btn-primary">Add site</button>
-                <a href="/" class="btn btn-secondary">Cancel</a>
-            </div>
-        </form>
+    {% if error %}
+    <div class="error-banner">
+        <strong>Couldn't add site —</strong> {{ error }}
     </div>
+    {% endif %}
+
+    <form action="/add-site" method="POST">
+        <label for="url">Website URL</label>
+        <input type="url" id="url" name="url" placeholder="https://example.com" required autofocus>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">Add site</button>
+            <a href="/" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
 </body>
 </html>
