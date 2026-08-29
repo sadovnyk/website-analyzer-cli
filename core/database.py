@@ -1,3 +1,5 @@
+from multiprocessing import connection
+
 from dotenv import load_dotenv
 import os
 import pymysql
@@ -126,7 +128,8 @@ def get_sites(only_active = False):
 def add_site_db(url):
     access = {
         "success": False,
-        "error": None
+        "error": None,
+        "last_id": None
     }
     connection = get_connection()
     try:
@@ -135,9 +138,122 @@ def add_site_db(url):
             values = (url,)
             cursor.execute(query, values)
             access["success"] = True
+            access["last_id"] = cursor.lastrowid
             connection.commit()
     except Exception as e:
         access["error"] = "db_insert_failed"
+    finally:
+        connection.close()
+
+    return access
+
+def get_site_details(site_id):
+    access = {
+        "success": False,
+        "error": None,
+        "site": None,
+        "scans": []
+    }
+
+    connection = get_connection()
+
+    try:
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            query = """
+                    SELECT sites.id AS site_id,
+                           sites.url,
+                           sites.is_active,
+                           sites.added_at,
+                           scans.id AS scan_id,
+                           scans.status_code,
+                           scans.title,
+                           scans.description,
+                           scans.duration_ms,
+                           scans.status_error,
+                           scans.ip,
+                           scans.country,
+                           scans.city,
+                           scans.org,
+                           scans.geo_error,
+                           scans.ssl_days_left,
+                           scans.valid,
+                           scans.cert_error,
+                           scans.total_links,
+                           scans.links_error
+                    FROM sites
+                             LEFT JOIN scans ON sites.id = scans.site_id
+                    WHERE sites.id = %s
+                    ORDER BY scans.id DESC
+                    """
+            values = (site_id,)
+            cursor.execute(query,values)
+            rows = cursor.fetchall()
+            if rows:
+                access["site"] = {
+                    "id": rows[0]["site_id"],
+                    "url": rows[0]["url"],
+                    "is_active": rows[0]["is_active"],
+                    "added_at": rows[0]["added_at"],
+                }
+
+                for row in rows:
+                    if row["scan_id"] is not None:
+                        access["scans"].append({
+
+                            "scan_id": row["scan_id"],
+                            "status_code": row["status_code"],
+                            "title": row["title"],
+                            "description": row["description"],
+                            "duration_ms": row["duration_ms"],
+                            "status_error": row["status_error"],
+                            "ip": row["ip"],
+                            "country": row["country"],
+                            "city": row["city"],
+                            "org": row["org"],
+                            "geo_error": row["geo_error"],
+                            "ssl_days_left": row["ssl_days_left"],
+                            "valid": row["valid"],
+                            "cert_error": row["cert_error"],
+                            "total_links": row["total_links"],
+                            "links_error": row["links_error"]
+
+                        })
+                access["success"] = True
+            else:
+                access["error"] = "site_not_found"
+
+        with pymongo.MongoClient(os.environ.get("MONGO_URI")) as client:
+            db = os.environ.get("MONGO_DB")
+            collection = os.environ.get("MONGO_CL")
+            for scan in access["scans"]:
+                resultt = client[db][collection].find_one({"my_sql_scan_id":scan["scan_id"]})
+                if resultt is not None:
+                    scan["broken_links"] = resultt["broken_links"]
+                else:
+                    scan["broken_links"] = []
+
+    except Exception:
+        access["error"] = "db_select_failed"
+    finally:
+        connection.close()
+
+    return access
+
+def delete_site(site_id):
+    access = {
+        "success": False,
+        "error": None,
+    }
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            query = ("DELETE FROM sites WHERE sites.id = %s")
+            values = (site_id,)
+            cursor.execute(query, values)
+            connection.commit()
+            access["success"] = True
+    except Exception:
+        access["error"] = "db_delete_failed"
     finally:
         connection.close()
 

@@ -1,9 +1,7 @@
 import asyncio
-
+from core.scan_runner import scan_one_site
 from datetime import datetime
-
-from core.database import get_sites, save_scan, save_links
-from main import analyze
+from core.database import get_sites
 
 
 async def run_schedule():
@@ -15,16 +13,8 @@ async def run_schedule():
             print("There are no active sites to scan.")
         for site in active_sites["result"]:
             print(f"Website scan: {site['url']}")
+            await scan_one_site(site["url"], site["id"])
 
-            scan_data = await analyze(site["url"])
-
-            save_result = save_scan(site["url"], scan_data, site["id"])
-
-            if save_result["success"] is True:
-                save_links(save_result["scan_id"], scan_data["links"])
-                print(f"The data has been successfully saved for {site['url']}")
-            else:
-                print(f"Error (MySQL): {save_result['error']}")
     else:
         print(f"Database error: {active_sites['error']}")
 
