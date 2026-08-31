@@ -4,10 +4,12 @@ from dotenv import load_dotenv
 import os
 import pymysql
 import pymongo
+from core.logger import get_logger
 
 load_dotenv()
+logger = get_logger(__name__)
 def get_connection():
-    return pymysql.connect(port=int(os.environ.get("DB_PORT")) ,host=os.environ.get("DB_HOST"),user=os.environ.get("DB_USER"),password=os.environ.get("DB_PASSWORD"),database=os.environ.get("DB_NAME"),charset="utf8mb4")
+    return pymysql.connect(port=int(os.environ.get("DB_PORT")) ,host=os.environ.get("DB_HOST"),user=os.environ.get("DB_USER"),password=os.environ.get("DB_PASSWORD"),database=os.environ.get("DB_NAME"),charset="utf8mb4",connect_timeout=5)
 
 def save_scan(url,data,site_id):
     access = {
@@ -15,8 +17,9 @@ def save_scan(url,data,site_id):
         "error": None,
         "scan_id": None
     }
-    connection = get_connection()
+    connection = None
     try:
+        connection = get_connection()
         with connection.cursor() as cursor:
             query = (
                 "INSERT INTO scans (url, status_code, title, description, duration_ms, "
@@ -49,10 +52,12 @@ def save_scan(url,data,site_id):
 
     except Exception as e:
         access["error"] = "db_insert_failed"
-        connection.rollback()
+        if connection:
+            connection.rollback()
 
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
     return access
 
@@ -87,9 +92,10 @@ def get_sites(only_active = False):
         "result": []
     }
 
-    connection = get_connection()
+    connection = None
 
     try:
+        connection = get_connection()
         with connection.cursor() as cursor:
 
             base_query = """
@@ -121,7 +127,8 @@ def get_sites(only_active = False):
     except Exception as e:
         access["error"] = "db_select_failed"
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
     return access
 
@@ -131,8 +138,9 @@ def add_site_db(url):
         "error": None,
         "last_id": None
     }
-    connection = get_connection()
+    connection = None
     try:
+        connection = get_connection()
         with connection.cursor() as cursor:
             query = ("INSERT INTO sites (url) values (%s)")
             values = (url,)
@@ -143,7 +151,8 @@ def add_site_db(url):
     except Exception as e:
         access["error"] = "db_insert_failed"
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
     return access
 
@@ -155,9 +164,10 @@ def get_site_details(site_id):
         "scans": []
     }
 
-    connection = get_connection()
+    connection = None
 
     try:
+        connection = get_connection()
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
             query = """
                     SELECT sites.id AS site_id,
@@ -237,7 +247,8 @@ def get_site_details(site_id):
     except Exception:
         access["error"] = "db_select_failed"
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
     return access
 
@@ -246,8 +257,9 @@ def delete_site(site_id):
         "success": False,
         "error": None,
     }
-    connection = get_connection()
+    connection = None
     try:
+        connection = get_connection()
         with connection.cursor() as cursor:
             query = ("DELETE FROM sites WHERE sites.id = %s")
             values = (site_id,)
@@ -257,7 +269,8 @@ def delete_site(site_id):
     except Exception:
         access["error"] = "db_delete_failed"
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
     return access
 
@@ -266,8 +279,9 @@ def toggle_site_active(site_id):
         "success": False,
         "error": None,
     }
-    connection = get_connection()
+    connection = None
     try:
+        connection = get_connection()
         with connection.cursor() as cursor:
             query = ("UPDATE sites SET is_active = NOT is_active WHERE sites.id = %s")
             values = (site_id,)
@@ -277,6 +291,34 @@ def toggle_site_active(site_id):
     except Exception:
         access["error"] = "db_update_failed"
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
     return access
+
+def check_mysql_connection():
+    connection = None
+    try:
+        connection = get_connection()
+        connection.ping(reconnect=True)
+    except Exception:
+        logger.warning("MySQL health check: connection failed")
+        return False
+    finally:
+        if connection:
+            connection.close()
+    return True
+
+
+def check_mongo_connection():
+    client = None
+    try:
+        client = pymongo.MongoClient(os.environ.get("MONGO_URI"),serverSelectionTimeoutMS=2000)
+        client.admin.command('ping')
+    except Exception:
+        logger.warning("Mongo health check: connection failed")
+        return False
+    finally:
+        if client:
+            client.close()
+    return True

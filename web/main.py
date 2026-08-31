@@ -1,7 +1,7 @@
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi import Request, BackgroundTasks, FastAPI, Form
-from core.database import get_sites,add_site_db,get_site_details,delete_site,toggle_site_active
+from fastapi import Request, BackgroundTasks, FastAPI, Form, Response, status
+from core.database import get_sites,add_site_db,get_site_details,delete_site,toggle_site_active,check_mysql_connection,check_mongo_connection
 from core.scan_runner import scan_one_site
 from starlette.responses import RedirectResponse
 from urllib.parse import quote
@@ -63,3 +63,22 @@ async def toggle_site(request: Request, site_id: int):
     else:
         old_result = get_sites()
         return templates.TemplateResponse(request=request,name="index.html",context={"request": request,"sites": old_result["result"], "error": result["error"]})
+
+@app.get("/healthz")
+async def health(response: Response):
+    mysql_ok = check_mysql_connection()
+    mongo_ok = check_mongo_connection()
+    result = {
+        "status": "up",
+        "components": {
+            "mysql": "ok" if mysql_ok else "down",
+            "mongo": "ok" if mongo_ok else "down",
+        }
+    }
+
+
+    if not mysql_ok or not mongo_ok:
+        result["status"] = "down"
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return result
