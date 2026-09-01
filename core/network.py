@@ -40,6 +40,6 @@ async def check_status(url):
     except (asyncio.TimeoutError, ValueError):
         access["error"] = "timeout"
         return access
-    except aiohttp.ClientError as e:
+    except aiohttp.ClientError:
         access["error"] = "client_error"
         return access
