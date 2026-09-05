@@ -21,10 +21,8 @@ async def extract_links(base_url):
                 soup = BeautifulSoup(html, 'html.parser')
                 un_links = set()
                 for tag in soup.find_all('a', href=True):
-                    href = tag['href']
-                    if isinstance(href, list):
-                        href = " ".join(href)
-                    un_links.add(href.strip())
+                    href = str(tag['href']).strip()
+                    un_links.add(href)
                 access["links"] = un_links
                 access["status"] = 200
                 return access
