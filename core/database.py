@@ -5,13 +5,31 @@ import os
 import pymysql
 import pymongo
 from core.logger import get_logger
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from urllib.parse import urlparse
 
 load_dotenv()
 logger = get_logger(__name__)
-def get_connection():
-    return pymysql.connect(port=int(os.environ.get("DB_PORT")) ,host=os.environ.get("DB_HOST"),user=os.environ.get("DB_USER"),password=os.environ.get("DB_PASSWORD"),database=os.environ.get("DB_NAME"),charset="utf8mb4",connect_timeout=5)
 
-def save_scan(url,data,site_id):
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=8),
+    retry=retry_if_exception_type(pymysql.err.OperationalError),
+    reraise=True
+)
+def get_connection():
+    return pymysql.connect(
+        port=int(os.environ.get("DB_PORT")),
+        host=os.environ.get("DB_HOST"),
+        user=os.environ.get("DB_USER"),
+        password=os.environ.get("DB_PASSWORD"),
+        database=os.environ.get("DB_NAME"),
+        charset="utf8mb4",connect_timeout=5
+    )
+
+max_active_scan_links = 5
+
+def save_scan(url,data,site_id, domain=None):
     access = {
         "success": False,
         "error": None,
@@ -51,7 +69,7 @@ def save_scan(url,data,site_id):
         access["success"] = True
 
     except Exception as e:
-        access["error"] = "db_insert_failed"
+        access["error"] = str(e)
         if connection:
             connection.rollback()
 
@@ -114,12 +132,15 @@ def get_sites(only_active = False):
             cursor.execute(query)
             rows = cursor.fetchall()
             for row in rows:
+                parsed_url = row[1] if row[1] else ""
+                clean_domain = urlparse(parsed_url).netloc if parsed_url else ""
                 site_dict = {
                     "id": row[0],
                     "url": row[1],
                     "is_active": row[2],
                     "status_code": row[3],
-                    "title": row[4]
+                    "title": row[4],
+                    "domain": clean_domain
                 }
                 access["result"].append(site_dict)
 
@@ -200,6 +221,8 @@ def get_site_details(site_id):
             cursor.execute(query,values)
             rows = cursor.fetchall()
             if rows:
+                parsed_url = rows[0]["url"] if rows[0]["url"] else ""
+                clean_domain = urlparse(parsed_url).netloc if parsed_url else ""
                 access["site"] = {
                     "id": rows[0]["site_id"],
                     "url": rows[0]["url"],
@@ -283,6 +306,22 @@ def toggle_site_active(site_id):
     try:
         connection = get_connection()
         with connection.cursor() as cursor:
+            query = ("SELECT is_active FROM sites WHERE id = %s")
+            values = (site_id,)
+            cursor.execute(query, values)
+            row = cursor.fetchone()
+
+            if row is None:
+                access["error"] = "site_not_found"
+                return access
+
+            is_currently_active = row[0]
+            if not is_currently_active:
+                all_active_sites = get_sites(only_active=True)
+                if len(all_active_sites["result"]) >= max_active_scan_links:
+                    access["error"] = "total_active_links_reached"
+                    return access
+
             query = ("UPDATE sites SET is_active = NOT is_active WHERE sites.id = %s")
             values = (site_id,)
             cursor.execute(query, values)

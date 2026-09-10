@@ -368,11 +368,7 @@ async def test_broken_links_propagates_error_from_extract_links():
 
 
 async def test_broken_links_treats_check_link_exception_as_broken():
-    """
-    check_links оборачує винятки в результати через asyncio.gather(..., return_exceptions=True),
-    тому навіть непередбачений виняток при перевірці одного лінку має потрапити в broken_links,
-    а не завалити всю функцію broken_links.
-    """
+
     mock_extracted = {
         "status": 200,
         "error": None,

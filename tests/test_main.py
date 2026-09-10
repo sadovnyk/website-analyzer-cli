@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import patch, MagicMock
 from starlette.testclient import TestClient
 from urllib.parse import quote
-from web.main import app
-
+from web.main import app, add_site_post
+from starlette.requests import Request
 client = TestClient(app)
 
 
@@ -40,7 +40,7 @@ def test_root_db_failure_renders_index_with_error(mock_template_response):
     assert response.status_code == 200
     call_kwargs = mock_template_response.call_args.kwargs
     assert call_kwargs["context"]["sites"] == []
-    assert call_kwargs["context"]["error"] == "db_select_failed"
+    assert call_kwargs["context"]["error"] == "Temporary database issues. Please refresh the page."
 
 def test_add_site_get_renders_form(mock_template_response):
     response = client.get("/add-site")
@@ -107,7 +107,7 @@ def test_site_detail_not_found_renders_empty_state(mock_template_response):
     assert response.status_code == 200
     call_kwargs = mock_template_response.call_args.kwargs
     assert call_kwargs["context"]["site"] is None
-    assert call_kwargs["context"]["error"] == "site_not_found"
+    assert call_kwargs["context"]["error"] == "That page was not found."
     assert call_kwargs["context"]["scans"] == []
     assert call_kwargs["context"]["chart_scans"] == []
 
@@ -134,7 +134,7 @@ def test_delete_site_failure_renders_index_with_error(mock_template_response):
     assert response.status_code == 200
     call_kwargs = mock_template_response.call_args.kwargs
     assert call_kwargs["name"] == "index.html"
-    assert call_kwargs["context"]["error"] == "db_delete_failed"
+    assert call_kwargs["context"]["error"] == "The site could not be deleted. Please try again."
     assert call_kwargs["context"]["sites"] == sites
 
 
@@ -155,8 +155,41 @@ def test_toggle_site_failure_renders_index_with_error(mock_template_response):
 
     assert response.status_code == 200
     call_kwargs = mock_template_response.call_args.kwargs
-    assert call_kwargs["context"]["error"] == "db_update_failed"
+    assert call_kwargs["context"]["error"] == "The site status could not be updated. Please try again."
     assert call_kwargs["context"]["sites"] == sites
+
+
+@pytest.mark.asyncio
+async def test_add_site_post_returns_template_on_url_error():
+    module_path = add_site_post.__module__
+
+    mock_request = MagicMock(spec=Request)
+    mock_bg_tasks = MagicMock()
+    raw_url = "invalid_url_string"
+    expected_error = "invalid_scheme"
+    user_error_text = "Not correct protocol of URL"
+
+    with patch(f"{module_path}.get_normalized_url") as mock_normalize, \
+            patch(f"{module_path}.get_user_message", return_value=user_error_text) as mock_msg, \
+            patch(f"{module_path}.templates.TemplateResponse") as mock_template_response:
+        mock_normalize.return_value = {"url": None, "error": expected_error}
+
+        # 3. Виклик функції
+        response = await add_site_post(
+            request=mock_request,
+            background_tasks=mock_bg_tasks,
+            url=raw_url,
+        )
+
+        mock_normalize.assert_called_once_with(raw_url)
+        mock_msg.assert_called_once_with(expected_error)
+
+        mock_template_response.assert_called_once_with(
+            request=mock_request,
+            name="add_site.html",
+            context={"request": mock_request, "error": user_error_text},
+        )
+        assert response == mock_template_response.return_value
 
 def test_healthz_all_up_returns_200():
     with patch("web.main.check_mysql_connection", return_value=True), \

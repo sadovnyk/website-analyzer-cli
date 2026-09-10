@@ -60,7 +60,7 @@ def test_save_scan_db_error_rolls_back(mock_connection, mock_cursor):
         result = database.save_scan("https://example.com", make_scan_data(), site_id=1)
 
     assert result["success"] is False
-    assert result["error"] == "db_insert_failed"
+    assert result["error"] == "db error"
     mock_connection.rollback.assert_called_once()
     mock_connection.commit.assert_not_called()
     mock_connection.close.assert_called_once()
@@ -71,7 +71,7 @@ def test_save_scan_connection_always_closed_even_on_connect_failure():
         result = database.save_scan("https://example.com", make_scan_data(), site_id=1)
 
     assert result["success"] is False
-    assert result["error"] == "db_insert_failed"
+    assert result["error"] == "no connection"
 
 def test_save_links_success(mock_mongo_collection, monkeypatch):
     client, collection = mock_mongo_collection
@@ -109,8 +109,8 @@ def test_get_sites_returns_mapped_rows(mock_connection, mock_cursor):
 
     assert result["success"] is True
     assert result["result"] == [
-        {"id": 1, "url": "https://a.com", "is_active": True, "status_code": 200, "title": "A"},
-        {"id": 2, "url": "https://b.com", "is_active": False, "status_code": None, "title": None},
+        {"id": 1, "url": "https://a.com", "is_active": True, "status_code": 200, "title": "A", "domain": "a.com"},
+        {"id": 2, "url": "https://b.com", "is_active": False, "status_code": None, "title": None, "domain": "b.com"}
     ]
 
 
@@ -245,17 +245,6 @@ def test_get_site_details_db_error(mock_connection, mock_cursor):
         assert result["success"] is False
         assert result["error"] == "db_delete_failed"
 
-def test_toggle_site_active_success(mock_connection, mock_cursor):
-    with patch("core.database.get_connection", return_value=mock_connection):
-        result = database.toggle_site_active(1)
-
-    assert result["success"] is True
-    mock_cursor.execute.assert_called_once_with(
-        "UPDATE sites SET is_active = NOT is_active WHERE sites.id = %s", (1,)
-    )
-    mock_connection.commit.assert_called_once()
-
-
 def test_toggle_site_active_failure(mock_connection, mock_cursor):
     mock_cursor.execute.side_effect = Exception("fail")
     with patch("core.database.get_connection", return_value=mock_connection):
@@ -287,3 +276,92 @@ def test_check_mongo_connection_success():
 def test_check_mongo_connection_failure():
     with patch("core.database.pymongo.MongoClient", side_effect=Exception("down")):
         assert database.check_mongo_connection() is False
+
+def test_toggle_site_active_success_when_deactivating(mock_connection, mock_cursor):
+    mock_cursor.fetchone.return_value = (True,)
+
+    with patch("core.database.get_connection", return_value=mock_connection):
+        result = database.toggle_site_active(1)
+
+    assert result["success"] is True
+    assert mock_cursor.execute.call_count == 2
+    mock_cursor.execute.assert_any_call("SELECT is_active FROM sites WHERE id = %s", (1,))
+    mock_cursor.execute.assert_any_call(
+        "UPDATE sites SET is_active = NOT is_active WHERE sites.id = %s", (1,)
+    )
+    mock_connection.commit.assert_called_once()
+
+
+def test_toggle_site_active_success_when_activating_below_limit(mock_connection, mock_cursor):
+    mock_cursor.fetchone.return_value = (False,)
+
+    with patch("core.database.get_connection", return_value=mock_connection), \
+         patch("core.database.get_sites", return_value={"success": True, "result": [], "error": None}):
+
+        result = database.toggle_site_active(1)
+
+    assert result["success"] is True
+    mock_connection.commit.assert_called_once()
+
+
+def test_toggle_site_active_blocks_activation_when_limit_reached(mock_connection, mock_cursor):
+    mock_cursor.fetchone.return_value = (False,)
+
+    with patch("core.database.get_connection", return_value=mock_connection), \
+         patch("core.database.get_sites", return_value={
+             "success": True, "result": [{"id": i} for i in range(5)], "error": None
+         }):
+
+        result = database.toggle_site_active(1)
+
+    assert result["success"] is False
+    assert result["error"] == "total_active_links_reached"
+    mock_connection.commit.assert_not_called()
+    assert mock_cursor.execute.call_count == 1
+
+
+def test_toggle_site_active_deactivates_even_when_limit_reached(mock_connection, mock_cursor):
+    mock_cursor.fetchone.return_value = (True,)
+
+    with patch("core.database.get_connection", return_value=mock_connection), \
+         patch("core.database.get_sites") as mock_get_sites:
+
+        result = database.toggle_site_active(1)
+
+    assert result["success"] is True
+    mock_connection.commit.assert_called_once()
+    mock_get_sites.assert_not_called()
+
+
+def test_toggle_site_active_site_not_found(mock_connection, mock_cursor):
+    mock_cursor.fetchone.return_value = None
+
+    with patch("core.database.get_connection", return_value=mock_connection):
+        result = database.toggle_site_active(999)
+
+    assert result["success"] is False
+    assert result["error"] == "site_not_found"
+    mock_connection.commit.assert_not_called()
+    assert mock_cursor.execute.call_count == 1
+
+
+def test_toggle_site_active_db_error_on_select(mock_connection, mock_cursor):
+    mock_cursor.execute.side_effect = Exception("db down")
+
+    with patch("core.database.get_connection", return_value=mock_connection):
+        result = database.toggle_site_active(1)
+
+    assert result["success"] is False
+    assert result["error"] == "db_update_failed"
+
+
+def test_toggle_site_active_db_error_on_update(mock_connection, mock_cursor):
+    mock_cursor.fetchone.return_value = (True,)
+    mock_cursor.execute.side_effect = [None, Exception("update failed")]
+
+    with patch("core.database.get_connection", return_value=mock_connection):
+        result = database.toggle_site_active(1)
+
+    assert result["success"] is False
+    assert result["error"] == "db_update_failed"
+

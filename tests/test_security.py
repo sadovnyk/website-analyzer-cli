@@ -1,4 +1,4 @@
-from core.security import get_ip, get_geolocation, certificate
+from core.security import get_ip, get_geolocation, certificate, get_normalized_url
 from aioresponses import aioresponses
 from unittest.mock import patch, MagicMock, AsyncMock
 import pytest
@@ -270,3 +270,101 @@ async def test_get_geolocation_uses_correct_url_for_given_ip():
         result = await get_geolocation("1.1.1.1")
 
     assert result["country"] == "AU"
+
+@pytest.mark.parametrize(
+    "raw_url, expected_url",
+    [
+        ("https://example.com", "https://example.com"),
+        ("http://example.com", "http://example.com"),
+        ("example.com", "https://example.com"),
+        ("sub.domain.com", "https://sub.domain.com"),
+        ("   https://example.com   ", "https://example.com"),
+        ("   example.com/test   ", "https://example.com/test"),
+        ("https://example.com/path/to/page", "https://example.com/path/to/page"),
+        ("example.com/search?q=pytest&lang=ua", "https://example.com/search?q=pytest&lang=ua"),
+        ("example.com#section", "https://example.com#section"),
+        ("https://example.com:8080/api", "https://example.com:8080/api"),
+    ],
+)
+def test_valid_urls_return_success(raw_url, expected_url):
+    result = get_normalized_url(raw_url)
+    assert result == {"url": expected_url, "error": None}
+
+
+def test_max_length_boundary_2048_chars():
+    base = "https://example.com/"
+    valid_url = base + ("a" * (2048 - len(base)))
+
+    result = get_normalized_url(valid_url)
+    assert result == {"url": valid_url, "error": None}
+
+
+@pytest.mark.parametrize(
+    "invalid_input",
+    [
+        None,
+        123,
+        12.34,
+        [],
+        {},
+        True,
+        b"https://example.com",
+    ],
+)
+def test_non_string_input_returns_invalid_url(invalid_input):
+    result = get_normalized_url(invalid_input)
+    assert result == {"url": None, "error": "invalid_url"}
+
+
+@pytest.mark.parametrize("empty_input", ["", "   ", "\t\n"])
+def test_empty_string_returns_empty_url(empty_input):
+    result = get_normalized_url(empty_input)
+    assert result == {"url": None, "error": "empty_url"}
+
+
+def test_url_exceeding_max_length_returns_error():
+    base = "https://example.com/"
+    too_long_url = base + ("a" * (2049 - len(base)))
+
+    result = get_normalized_url(too_long_url)
+    assert result == {"url": None, "error": "url_too_long"}
+
+
+@pytest.mark.parametrize(
+    "unsupported_scheme_url",
+    [
+        "ftp://files.example.com",
+        "mailto:user@example.com",
+        "ssh://git@github.com",
+        "ws://example.com/socket",
+        "javascript:alert(1)",
+    ],
+)
+def test_invalid_scheme_returns_error(unsupported_scheme_url):
+    result = get_normalized_url(unsupported_scheme_url)
+    assert result == {"url": None, "error": "invalid_scheme"}
+
+
+@pytest.mark.parametrize(
+    "invalid_netloc_url",
+    [
+        "localhost",
+        "http://localhost",
+        "http://mycomputer/path",
+        "someinternalname",
+        "https://",
+        "http://",
+    ],
+)
+def test_missing_dot_or_empty_netloc_returns_invalid_url(invalid_netloc_url):
+    result = get_normalized_url(invalid_netloc_url)
+    assert result == {"url": None, "error": "invalid_url"}
+
+
+def test_urlparse_value_error_handling():
+    target_path = f"{get_normalized_url.__module__}.urlparse"
+
+    with patch(target_path, side_effect=ValueError("Test error")):
+        result = get_normalized_url("https://example.com")
+
+    assert result == {"url": None, "error": "invalid_url"}

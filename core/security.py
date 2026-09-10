@@ -6,6 +6,15 @@ from datetime import datetime, timezone
 from core.config import HEADERS
 
 
+def get_domain(url):
+    try:
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc
+        return domain
+    except ValueError:
+        return None
+
+
 def get_ip(url):
     try:
         host = urlparse(url).hostname
@@ -15,6 +24,51 @@ def get_ip(url):
         return ip
     except (socket.gaierror, ValueError, UnicodeError):
         return None
+
+
+def get_normalized_url(url):
+    access = {
+        "url": None,
+        "error": None
+    }
+
+    max_url_length = 2048
+    allowed_schemes = {"http", "https"}
+
+    if not isinstance(url, str):
+        access["error"] = "invalid_url"
+        return access
+
+    url = url.strip()
+
+    if not url:
+        access["error"] = "empty_url"
+        return access
+
+    if len(url) > max_url_length:
+        access["error"] = "url_too_long"
+        return access
+
+    try:
+        parsed = urlparse(url)
+
+        if not parsed.scheme:
+            parsed = urlparse("https://" + url)
+
+        if parsed.scheme not in allowed_schemes:
+            access["error"] = "invalid_scheme"
+            return access
+
+        if not parsed.netloc or "." not in parsed.netloc:
+            access["error"] = "invalid_url"
+            return access
+
+        access["url"] = parsed.geturl()
+        return access
+
+    except ValueError:
+        access["error"] = "invalid_url"
+        return access
 
 
 async def get_geolocation(ip):

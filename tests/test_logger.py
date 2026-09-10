@@ -1,7 +1,5 @@
 import logging
-import importlib
 import os
-import pytest
 
 def test_get_logger_returns_logger_with_correct_name(logger_module):
     logger = logger_module.get_logger("test_logger_name")

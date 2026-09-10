@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 import logging
 import aiohttp
+
 @pytest.fixture
 def mock_aiohttp_get():
     with patch("core.links.aiohttp.ClientSession") as mock_session_class:
