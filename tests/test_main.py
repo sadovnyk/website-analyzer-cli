@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 from starlette.testclient import TestClient
 from urllib.parse import quote
 from web.main import app, add_site_post
+
 from starlette.requests import Request
 client = TestClient(app)
 
@@ -240,3 +241,38 @@ def test_healthz_both_down_returns_503():
     assert data["status"] == "down"
     assert data["components"]["mysql"] == "down"
     assert data["components"]["mongo"] == "down"
+
+@patch("web.main.toggle_site_pin")
+def test_pin_route_success_redirects_home(mock_toggle):
+    mock_toggle.return_value = {"success": True, "error": None}
+
+    response = client.post("/site/1/pin", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
+    mock_toggle.assert_called_once_with(1)
+
+
+@patch("web.main.get_sites")
+@patch("web.main.toggle_site_pin")
+def test_pin_route_failure_renders_index_with_error(mock_toggle, mock_get_sites):
+    mock_toggle.return_value = {"success": False, "error": "site_not_found"}
+    mock_get_sites.return_value = {"success": True, "result": []}
+
+    response = client.post("/site/999/pin", follow_redirects=False)
+
+    assert response.status_code == 200
+    assert "Error" in response.text
+
+
+@patch("web.main.toggle_site_pin")
+def test_pin_route_toggles_twice(mock_toggle):
+    mock_toggle.return_value = {"success": True, "error": None}
+
+    response1 = client.post("/site/5/pin", follow_redirects=False)
+    assert response1.status_code == 303
+
+    response2 = client.post("/site/5/pin", follow_redirects=False)
+    assert response2.status_code == 303
+
+    assert mock_toggle.call_count == 2

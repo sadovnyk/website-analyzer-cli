@@ -1382,3 +1382,32 @@ input[type="text"]:focus {
     background: var(--surface-2);
     color: var(--text);
 }
+
+.btn-pin {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    background-color: transparent;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    color: #00d2ff;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s, background-color 0.15s;
+}
+
+.btn-pin:hover {
+    background-color: rgba(0, 210, 255, 0.1);
+}
+
+.btn-pin.is-pinned {
+    color: #00d2ff;
+}
+
+.btn-pin:focus {
+    background: transparent;
+    outline: none;
+}

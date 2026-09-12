@@ -117,7 +117,7 @@ def get_sites(only_active = False):
         with connection.cursor() as cursor:
 
             base_query = """
-                         SELECT sts.id, sts.url, sts.is_active, scs.status_code, scs.title
+                         SELECT sts.id, sts.url, sts.is_active,sts.is_pinned, scs.status_code, scs.title
                          FROM sites sts
                                   LEFT JOIN scans scs ON sts.id = scs.site_id
                              AND scs.id = (SELECT MAX(id) \
@@ -138,8 +138,9 @@ def get_sites(only_active = False):
                     "id": row[0],
                     "url": row[1],
                     "is_active": row[2],
-                    "status_code": row[3],
-                    "title": row[4],
+                    "is_pinned": row[3],
+                    "status_code": row[4],
+                    "title": row[5],
                     "domain": clean_domain
                 }
                 access["result"].append(site_dict)
@@ -361,3 +362,34 @@ def check_mongo_connection():
         if client:
             client.close()
     return True
+
+def toggle_site_pin(site_id):
+    access = {
+        "success": False,
+        "error": None,
+    }
+    connection = None
+    try:
+        connection = get_connection()
+        with connection.cursor() as cursor:
+            query = ("SELECT is_pinned FROM sites WHERE id = %s")
+            values = (site_id,)
+            cursor.execute(query, values)
+            row = cursor.fetchone()
+
+            if row is None:
+                access["error"] = "site_not_found"
+                return access
+
+            query = ("UPDATE sites SET is_pinned = NOT is_pinned WHERE sites.id = %s")
+            values = (site_id,)
+            cursor.execute(query, values)
+            connection.commit()
+            access["success"] = True
+    except Exception:
+        access["error"] = "db_update_failed"
+    finally:
+        if connection:
+            connection.close()
+
+    return access

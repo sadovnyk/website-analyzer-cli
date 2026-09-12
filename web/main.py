@@ -1,7 +1,7 @@
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi import Request, BackgroundTasks, FastAPI, Form, Response, status
-from core.database import get_sites,add_site_db,get_site_details,delete_site,toggle_site_active,check_mysql_connection,check_mongo_connection
+from core.database import get_sites,add_site_db,get_site_details,delete_site,toggle_site_active,check_mysql_connection,check_mongo_connection, toggle_site_pin
 from core.scan_runner import scan_one_site
 from starlette.responses import RedirectResponse
 from urllib.parse import quote
@@ -100,3 +100,15 @@ async def health(response: Response):
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return result
+
+@app.post("/site/{site_id}/pin")
+async def pin_site(request: Request, site_id: int):
+    result = toggle_site_pin(site_id)
+    if result["success"] is True:
+        return RedirectResponse(url="/", status_code=303)
+    else:
+        old_result = get_sites()
+        return templates.TemplateResponse(
+            request=request, name="index.html",
+            context={"request": request, "sites": old_result["result"], "error": get_user_message(result["error"])}
+        )

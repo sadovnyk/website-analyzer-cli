@@ -33,11 +33,12 @@
     {% set paused_count = total_count - active_count %}
     {% set issue_count = sites | selectattr('status_code') | selectattr('status_code', 'ge', 400) | list | length %}
     {% set recent_sites = sites | sort(attribute='id', reverse=true) %}
+    {% set sorted_sites = sites | sort(attribute='id', reverse=true) | sort(attribute='is_pinned', reverse=true) %}
 
     <div class="dashboard-layout">
         <main>
             <div class="site-grid">
-                {% for site in sites %}
+                {% for site in sorted_sites %}
                     <div class="site-card" data-site-id="{{ site.id }}" style="--i: {{ loop.index0 }};">
 
                         <div class="site-card-top">
@@ -73,6 +74,16 @@
 
                         <div class="site-card-actions">
                             <a href="/site/{{ site.id }}" class="btn-view">View details →</a>
+                            <form class="pin-form" action="/site/{{ site.id }}/pin" method="POST" data-turbo="false">
+                                <button type="submit"
+                                class="btn-pin {% if site.is_pinned %}is-pinned{% endif %}"
+                                title="{{ 'Unpin site' if site.is_pinned else 'Pin to top' }}"
+                                aria-label="Pin">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="{{ 'currentColor' if site.is_pinned else 'none' }}" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 17v5M5 7l14 0M7 7v7l-2 2h14l-2-2V7M9 3h6v4H9z" />
+                                    </svg>
+                                </button>
+                            </form>
                             <form class="toggle-form" action="/site/{{ site.id }}/toggle" method="POST" data-turbo="false">
                                 <button type="submit"
                                         class="toggle-switch{% if site.is_active %} is-on{% endif %}"

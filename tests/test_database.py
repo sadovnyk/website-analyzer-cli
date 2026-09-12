@@ -101,16 +101,16 @@ def test_save_links_mongo_error(monkeypatch):
 
 def test_get_sites_returns_mapped_rows(mock_connection, mock_cursor):
     mock_cursor.fetchall.return_value = [
-        (1, "https://a.com", True, 200, "A"),
-        (2, "https://b.com", False, None, None),
+        (1, "https://a.com", True, True, 200, "A"),
+        (2, "https://b.com", False, False, None, None),
     ]
     with patch("core.database.get_connection", return_value=mock_connection):
         result = database.get_sites()
 
     assert result["success"] is True
     assert result["result"] == [
-        {"id": 1, "url": "https://a.com", "is_active": True, "status_code": 200, "title": "A", "domain": "a.com"},
-        {"id": 2, "url": "https://b.com", "is_active": False, "status_code": None, "title": None, "domain": "b.com"}
+        {"id": 1, "url": "https://a.com", "is_active": True,"is_pinned": True, "status_code": 200, "title": "A", "domain": "a.com"},
+        {"id": 2, "url": "https://b.com", "is_active": False,"is_pinned": False, "status_code": None, "title": None, "domain": "b.com"}
     ]
 
 
@@ -364,4 +364,74 @@ def test_toggle_site_active_db_error_on_update(mock_connection, mock_cursor):
 
     assert result["success"] is False
     assert result["error"] == "db_update_failed"
+
+@patch("core.database.get_connection")
+def test_toggle_site_pin_success(mock_get_connection):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.fetchone.return_value = (0,)  # is_pinned = False
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_get_connection.return_value = mock_conn
+
+    result = database.toggle_site_pin(1)
+
+    assert result["success"] is True
+    assert result["error"] is None
+    mock_conn.commit.assert_called_once()
+    mock_conn.close.assert_called_once()
+
+@patch("core.database.get_connection")
+def test_toggle_site_pin_site_not_found(mock_get_connection):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.fetchone.return_value = None  # сайту не існує
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_get_connection.return_value = mock_conn
+
+    result = database.toggle_site_pin(999)
+
+    assert result["success"] is False
+    assert result["error"] == "site_not_found"
+    mock_conn.commit.assert_not_called()
+
+@patch("core.database.get_connection")
+def test_toggle_site_pin_db_error(mock_get_connection):
+    mock_get_connection.side_effect = Exception("connection refused")
+
+    result = database.toggle_site_pin(1)
+
+    assert result["success"] is False
+    assert result["error"] == "db_update_failed"
+
+@patch("core.database.get_connection")
+def test_get_sites_includes_is_pinned_field(mock_get_connection):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.fetchall.return_value = [
+        (1, "https://example.com", True, True, 200, "Example"),
+    ]
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_get_connection.return_value = mock_conn
+
+    result = database.get_sites()
+
+    assert result["success"] is True
+    site = result["result"][0]
+    assert "is_pinned" in site
+    assert site["is_pinned"] is True
+
+
+@patch("core.database.get_connection")
+def test_get_sites_is_pinned_false_by_default(mock_get_connection):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.fetchall.return_value = [
+        (2, "https://another.com", True, False, 404, "Another"),
+    ]
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_get_connection.return_value = mock_conn
+
+    result = database.get_sites()
+
+    assert result["result"][0]["is_pinned"] is False
 
