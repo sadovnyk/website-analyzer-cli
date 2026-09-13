@@ -17,7 +17,7 @@
     <header>
         <div class="brand">
             <span class="pulse-dot" aria-hidden="true"></span>
-            SITEPULSE
+            SitePulse
         </div>
         <a href="/add-site" class="btn">+ Add site</a>
     </header>
@@ -37,10 +37,17 @@
 
     <div class="dashboard-layout">
         <main>
-            <input type="text" id="site-search" placeholder="Enter a website">
+            <div class="controls-row">
+                <input type="text" id="site-search" placeholder="Enter a website">
+                <select id="status-filter">
+                    <option value="all">All</option>
+                    <option value="active">Active</option>
+                    <option value="paused">Paused</option>
+                </select>
+            </div>
             <div class="site-grid">
                 {% for site in sorted_sites %}
-                    <div class="site-card" data-site-id="{{ site.id }}" data-search="{{ site.url }}" style="--i: {{ loop.index0 }};">
+                    <div class="site-card" data-site-id="{{ site.id }}" data-search="{{ site.url }}" data-active="{{ 'true' if site.is_active else 'false' }}" style="--i: {{ loop.index0 }};">
 
                         <div class="site-card-top">
                             <div class="site-card-header-row">

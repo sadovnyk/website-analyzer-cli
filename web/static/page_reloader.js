@@ -254,6 +254,23 @@ function showToastError(message) {
     })
 })();
 
+(function filterByStatus(){
+    if (window.__filterByStatus) return;
+    window.__filterByStatus = true;
+    document.addEventListener("change", (e) => {
+        if (e.target.id !== "status-filter") return;
+        const status = e.target.value; // "all" | "active" | "paused"
+        document.querySelectorAll(".site-card").forEach((card) => {
+            const isActive = card.dataset.active === "true";
+            const matches =
+                status === "all" ||
+                (status === "active" && isActive) ||
+                (status === "paused" && !isActive);
+            card.classList.toggle("is-hidden-status", !matches);
+        });
+    });
+})();
+
 (function setupToggleForms() {
     if (window.__toggleSetupDone) return;
     window.__toggleSetupDone = true;
@@ -357,3 +374,30 @@ document.getElementById("add-site-form").addEventListener("submit", function(eve
         urlInput.value = value;
     }
 });
+(function updateEmptyState(){
+    if (window.__updateEmptyState) return;
+    window.__updateEmptyState = true;
+
+    function checkEmpty() {
+        const cards = document.querySelectorAll(".site-card");
+        const visibleCount = Array.from(cards).filter(
+            (card) => !card.classList.contains("is-hidden") &&
+                      !card.classList.contains("is-hidden-status")
+        ).length;
+
+        const emptyBlock = document.getElementById("search-empty");
+        if (emptyBlock) {
+            emptyBlock.classList.toggle("is-hidden", visibleCount > 0);
+        }
+    }
+
+    document.addEventListener("input", (e) => {
+        if (e.target.id !== "site-search") return;
+        checkEmpty();
+    });
+
+    document.addEventListener("change", (e) => {
+        if (e.target.id !== "status-filter") return;
+        checkEmpty();
+    });
+})();
