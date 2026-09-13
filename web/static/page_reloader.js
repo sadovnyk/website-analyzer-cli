@@ -235,6 +235,24 @@ function showToastError(message) {
         toast.classList.remove('is-visible');
     }, 4000);
 }
+(function searchSites(){
+    if (window.__searchSites) return;
+    window.__searchSites = true;
+    document.addEventListener("input", (e) =>{
+        if (e.target.id !== "site-search") return;
+        const query = e.target.value.toLowerCase().trim();
+        let visibleCount = 0;
+        document.querySelectorAll(".site-card").forEach((card) => {
+            const cardText = card.dataset.search.toLowerCase();
+            const matches = cardText.includes(query);
+            card.classList.toggle('is-hidden', !matches);
+            if (matches){
+                visibleCount++;
+            }
+        })
+        document.getElementById("search-empty").classList.toggle("is-hidden",visibleCount > 0);
+    })
+})();
 
 (function setupToggleForms() {
     if (window.__toggleSetupDone) return;

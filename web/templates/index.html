@@ -37,9 +37,10 @@
 
     <div class="dashboard-layout">
         <main>
+            <input type="text" id="site-search" placeholder="Enter a website">
             <div class="site-grid">
                 {% for site in sorted_sites %}
-                    <div class="site-card" data-site-id="{{ site.id }}" style="--i: {{ loop.index0 }};">
+                    <div class="site-card" data-site-id="{{ site.id }}" data-search="{{ site.url }}" style="--i: {{ loop.index0 }};">
 
                         <div class="site-card-top">
                             <div class="site-card-header-row">
@@ -104,6 +105,7 @@
                     </div>
                 {% endfor %}
             </div>
+        <div id="search-empty" class="is-hidden">There is nothing to show</div>
         </main>
 
         <aside class="sidebar">

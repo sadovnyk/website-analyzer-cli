@@ -1436,3 +1436,33 @@ input[type="text"]:focus {
     background: transparent;
     outline: none;
 }
+
+.is-hidden {
+    display: none;
+}
+
+#site-search {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+#site-search:focus {
+    outline: none;
+    border-color: var(--azure);
+}
+
+#search-empty {
+    text-align: center;
+    padding: 48px 20px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-dim, #a6a6ad);
+}
