@@ -1,5 +1,3 @@
-from multiprocessing import connection
-
 from dotenv import load_dotenv
 import os
 import pymysql
@@ -98,6 +96,7 @@ def save_links(scan_id,links_data):
             client[db][collection].insert_one(my_document)
             access["success"] = True
     except Exception as e:
+        logger.error(f"Mongo insert failed for scan_id={scan_id}: {e}")
         access["error"] = "db_insert_failed"
 
     return access
@@ -221,58 +220,62 @@ def get_site_details(site_id):
             values = (site_id,)
             cursor.execute(query,values)
             rows = cursor.fetchall()
-            if rows:
-                parsed_url = rows[0]["url"] if rows[0]["url"] else ""
-                clean_domain = urlparse(parsed_url).netloc if parsed_url else ""
-                access["site"] = {
-                    "id": rows[0]["site_id"],
-                    "url": rows[0]["url"],
-                    "is_active": rows[0]["is_active"],
-                    "added_at": rows[0]["added_at"],
-                }
 
-                for row in rows:
-                    if row["scan_id"] is not None:
-                        access["scans"].append({
-
-                            "scan_id": row["scan_id"],
-                            "status_code": row["status_code"],
-                            "title": row["title"],
-                            "description": row["description"],
-                            "duration_ms": row["duration_ms"],
-                            "status_error": row["status_error"],
-                            "ip": row["ip"],
-                            "country": row["country"],
-                            "city": row["city"],
-                            "org": row["org"],
-                            "geo_error": row["geo_error"],
-                            "ssl_days_left": row["ssl_days_left"],
-                            "valid": row["valid"],
-                            "cert_error": row["cert_error"],
-                            "total_links": row["total_links"],
-                            "links_error": row["links_error"],
-                            "scanned_at": row["scanned_at"]
-
-                        })
-                access["success"] = True
-            else:
+            if not rows:
                 access["error"] = "site_not_found"
+                return access
 
+            parsed_url = rows[0]["url"] if rows[0]["url"] else ""
+            clean_domain = urlparse(parsed_url).netloc if parsed_url else ""
+            access["site"] = {
+                "id": rows[0]["site_id"],
+                "url": rows[0]["url"],
+                "is_active": rows[0]["is_active"],
+                "added_at": rows[0]["added_at"],
+            }
+
+            for row in rows:
+                if row["scan_id"] is not None:
+                    access["scans"].append({
+                        "scan_id": row["scan_id"],
+                        "status_code": row["status_code"],
+                        "title": row["title"],
+                        "description": row["description"],
+                        "duration_ms": row["duration_ms"],
+                        "status_error": row["status_error"],
+                        "ip": row["ip"],
+                        "country": row["country"],
+                        "city": row["city"],
+                        "org": row["org"],
+                        "geo_error": row["geo_error"],
+                        "ssl_days_left": row["ssl_days_left"],
+                        "valid": row["valid"],
+                        "cert_error": row["cert_error"],
+                        "total_links": row["total_links"],
+                        "links_error": row["links_error"],
+                        "scanned_at": row["scanned_at"],
+                        "broken_links": [],
+                    })
+
+    except Exception:
+        access["error"] = "db_select_failed"
+        return access
+    finally:
+        if connection:
+            connection.close()
+
+    access["success"] = True
+
+    try:
         with pymongo.MongoClient(os.environ.get("MONGO_URI")) as client:
             db = os.environ.get("MONGO_DB")
             collection = os.environ.get("MONGO_CL")
             for scan in access["scans"]:
-                resultt = client[db][collection].find_one({"my_sql_scan_id":scan["scan_id"]})
-                if resultt is not None:
-                    scan["broken_links"] = resultt["broken_links"]
-                else:
-                    scan["broken_links"] = []
-
-    except Exception:
-        access["error"] = "db_select_failed"
-    finally:
-        if connection:
-            connection.close()
+                result = client[db][collection].find_one({"my_sql_scan_id": scan["scan_id"]})
+                if result is not None:
+                    scan["broken_links"] = result["broken_links"]
+    except Exception as e:
+        logger.error(f"Mongo lookup failed while fetching site {site_id} details: {e}")
 
     return access
 

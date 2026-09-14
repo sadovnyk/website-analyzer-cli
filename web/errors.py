@@ -10,6 +10,7 @@ error_messages = {
     "empty_url": "Please enter a website address.",
     "url_too_long": "The website address is too long.",
     "invalid_scheme": "Invalid website scheme.",
+    "unsafe_url": "This website address cannot be scanned.",
 }
 
 def get_user_message(error_code):

@@ -1,5 +1,6 @@
 import socket
 import ssl
+import ipaddress
 import aiohttp
 from urllib.parse import urlparse
 from datetime import datetime, timezone
@@ -24,6 +25,43 @@ def get_ip(url):
         return ip
     except (socket.gaierror, ValueError, UnicodeError):
         return None
+
+
+def _resolve_all_ips(hostname):
+
+    try:
+        infos = socket.getaddrinfo(hostname, None)
+        return {info[4][0] for info in infos}
+    except socket.gaierror:
+        return set()
+
+
+def _is_public_ip(ip_str):
+    try:
+        ip_obj = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+
+    return not (
+        ip_obj.is_private
+        or ip_obj.is_loopback
+        or ip_obj.is_link_local
+        or ip_obj.is_reserved
+        or ip_obj.is_multicast
+        or ip_obj.is_unspecified
+    )
+
+
+def is_safe_host(url):
+    host = urlparse(url).hostname
+    if not host:
+        return False
+
+    ips = _resolve_all_ips(host)
+    if not ips:
+        return False
+
+    return all(_is_public_ip(ip) for ip in ips)
 
 
 def get_normalized_url(url):

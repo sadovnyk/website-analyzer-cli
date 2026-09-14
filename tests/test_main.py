@@ -61,7 +61,7 @@ def test_add_site_post_failure_renders_form_with_error(mock_template_response):
     assert response.status_code == 200
     call_kwargs = mock_template_response.call_args.kwargs
     assert call_kwargs["name"] == "add_site.html"
-    assert call_kwargs["context"]["error"] == "db_insert_failed"
+    assert call_kwargs["context"]["error"] == "The data could not be saved. Please try again in a few minutes."
     mock_scan_one_site.assert_not_called()
 
 

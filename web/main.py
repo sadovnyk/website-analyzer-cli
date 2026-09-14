@@ -1,3 +1,4 @@
+import asyncio
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi import Request, BackgroundTasks, FastAPI, Form, Response, status
@@ -6,7 +7,7 @@ from core.scan_runner import scan_one_site
 from starlette.responses import RedirectResponse
 from urllib.parse import quote
 from web.errors import get_user_message
-from core.security import get_normalized_url
+from core.security import get_normalized_url, is_safe_host
 
 max_active_scan_links = 5
 max_total_scan_links = 50
@@ -37,6 +38,11 @@ async def add_site_post(request: Request,background_tasks: BackgroundTasks,url: 
         return templates.TemplateResponse(request=request, name="add_site.html",
                                           context={"request": request, "error": get_user_message(error_message)})
     checked_url = dict_url["url"]
+
+    if not await asyncio.to_thread(is_safe_host, checked_url):
+        return templates.TemplateResponse(request=request, name="add_site.html",
+                                          context={"request": request, "error": get_user_message("unsafe_url")})
+
     all_sites = get_sites()
     if len(all_sites["result"]) >= max_total_scan_links:
         return templates.TemplateResponse(request=request, name="add_site.html",
@@ -50,8 +56,9 @@ async def add_site_post(request: Request,background_tasks: BackgroundTasks,url: 
         background_tasks.add_task(scan_one_site, checked_url, result["last_id"])
         return RedirectResponse(url=f"/?scanning=1&url={quote(checked_url)}", status_code=303)
     else:
+
         return templates.TemplateResponse(request=request, name="add_site.html",
-                                          context={"request": request, "error": result["error"]})
+                                          context={"request": request, "error": get_user_message(result["error"])})
 
 @app.get("/site/{site_id}")
 async def site_detail(request: Request, site_id: int):
